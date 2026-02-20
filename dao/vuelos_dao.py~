@@ -1,0 +1,179 @@
+# dao/vuelos_dao.py
+
+from typing import List, Optional
+from database import get_connection, close_connection
+
+
+class VueloDAO:
+
+    # Insertar nuevo vuelo
+    @staticmethod
+    def insert(numero_vuelo: str,
+               id_ruta: int,
+               fecha_hora,
+               id_aeropuerto_origen: int,
+               id_aeropuerto_destino: int,
+               sala: int,
+               puerta: int,
+               capacidad: int = 150) -> bool:
+
+        connection = get_connection()
+        if not connection:
+            return False
+
+        try:
+            cursor = connection.cursor()
+
+            query = """
+                INSERT INTO vuelo (
+                    numero_vuelo,
+                    id_ruta,
+                    fecha_hora,
+                    id_aeropuerto_origen,
+                    id_aeropuerto_destino,
+                    sala,
+                    puerta,
+                    capacidad
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """
+
+            cursor.execute(query, (
+                numero_vuelo,
+                id_ruta,
+                fecha_hora,
+                id_aeropuerto_origen,
+                id_aeropuerto_destino,
+                sala,
+                puerta,
+                capacidad
+            ))
+
+            connection.commit()
+            return True
+
+        except Exception as e:
+            print("Error al insertar vuelo:", e)
+            connection.rollback()
+            return False
+
+        finally:
+            close_connection(connection)
+
+    # Obtener vuelo por ID
+    @staticmethod
+    def get_by_id(id_vuelo: int) -> Optional[dict]:
+
+        connection = get_connection()
+        if not connection:
+            return None
+
+        try:
+            cursor = connection.cursor(dictionary=True)
+
+            query = """
+                SELECT *
+                FROM vuelo
+                WHERE id_vuelo = %s
+            """
+
+            cursor.execute(query, (id_vuelo,))
+            return cursor.fetchone()
+
+        finally:
+            close_connection(connection)
+
+    # Obtener vuelos por fecha
+    @staticmethod
+    def get_by_fecha(fecha) -> List[dict]:
+
+        connection = get_connection()
+        if not connection:
+            return []
+
+        try:
+            cursor = connection.cursor(dictionary=True)
+
+            query = """
+                SELECT *
+                FROM vuelo
+                WHERE DATE(fecha_hora) = %s
+            """
+
+            cursor.execute(query, (fecha,))
+            return cursor.fetchall()
+
+        finally:
+            close_connection(connection)
+
+    # Verificar asientos disponibles
+    @staticmethod
+    def asientos_disponibles(id_vuelo: int) -> Optional[int]:
+
+        connection = get_connection()
+        if not connection:
+            return None
+
+        try:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT 
+                    v.capacidad - COUNT(r.id_reservacion) AS disponibles
+                FROM vuelo v
+                LEFT JOIN reservacion r ON v.id_vuelo = r.id_vuelo
+                WHERE v.id_vuelo = %s
+                GROUP BY v.capacidad
+            """
+
+            cursor.execute(query, (id_vuelo,))
+            result = cursor.fetchone()
+
+            if result:
+                return result[0]
+
+            return None
+
+        finally:
+            close_connection(connection)
+
+    # -------------------------------------------------
+    # Obtener vuelos entre ciudades
+    # -------------------------------------------------
+    @staticmethod
+    def get_vuelos_por_ciudades(id_ciudad_origen: int,
+                                id_ciudad_destino: int,
+                                fecha) -> List[dict]:
+
+        connection = get_connection()
+        if not connection:
+            return []
+
+        try:
+            cursor = connection.cursor(dictionary=True)
+
+            query = """
+                SELECT 
+                    v.id_vuelo,
+                    v.numero_vuelo,
+                    v.fecha_hora,
+                    r.distancia_km,
+                    r.tiempo_total,
+                    r.costo_total
+                FROM vuelo v
+                JOIN ruta r ON v.id_ruta = r.id_ruta
+                WHERE r.id_ciudad_origen = %s
+                  AND r.id_ciudad_destino = %s
+                  AND DATE(v.fecha_hora) = %s
+            """
+
+            cursor.execute(query, (
+                id_ciudad_origen,
+                id_ciudad_destino,
+                fecha
+            ))
+
+            return cursor.fetchall()
+
+        finally:
+            close_connection(connection)
