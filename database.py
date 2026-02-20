@@ -1,0 +1,32 @@
+# database.py
+
+import mysql.connector
+from mysql.connector import Error
+
+DB_CONFIG = {
+    "host": "localhost",
+    "user": "root",
+    "password": "12345",
+    "database": "aeroibero",
+    "port": 3306
+}
+
+
+def get_connection():
+    try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+
+        if connection.is_connected():
+            print("Conexión exitosa a MySQL")
+            return connection
+
+    except Error as e:
+        print(f"Error al conectar: {e}")
+        return None
+
+
+def close_connection(connection):
+    if connection and connection.is_connected():
+        connection.close()
+        print("Conexión cerrada")
+
