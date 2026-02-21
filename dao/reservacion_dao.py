@@ -13,7 +13,7 @@ def crear_reservacion(id_pasajero: int,
         cursor = connection.cursor()
         connection.start_transaction()
 
-        # 1️⃣ Verificar disponibilidad
+        # 1 Verificar disponibilidad
         capacidad_query = """
             SELECT v.capacidad - COUNT(r.id_reservacion)
             FROM vuelo v
@@ -29,7 +29,7 @@ def crear_reservacion(id_pasajero: int,
             connection.rollback()
             return None
 
-        # 2️⃣ Insertar reservación
+        # 2 Insertar reservación
         cursor.execute("""
             INSERT INTO reservacion (
                 id_pasajero,
@@ -41,7 +41,7 @@ def crear_reservacion(id_pasajero: int,
 
         id_reservacion = cursor.lastrowid
 
-        # 3️⃣ Calcular hora abordaje
+        # 3 Calcular hora abordaje
         cursor.execute("SELECT fecha_hora FROM vuelo WHERE id_vuelo = %s",
                        (id_vuelo,))
         vuelo_fecha = cursor.fetchone()[0]
@@ -49,7 +49,7 @@ def crear_reservacion(id_pasajero: int,
         from datetime import timedelta
         hora_abordaje = vuelo_fecha - timedelta(minutes=30)
 
-        # 4️⃣ Insertar pase SIN QR
+        # 4 Insertar pase SIN QR
         cursor.execute("""
             INSERT INTO pase_abordar (
                 id_reservacion,
