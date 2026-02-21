@@ -8,16 +8,16 @@ from dao.raza_dao import RazaDAO
 
 class PasajeroDAO:
 
-    # -------------------------------------------------
+   
     # Generar número único de cliente
-    # -------------------------------------------------
+
     @staticmethod
     def generar_numero_cliente() -> str:
         return "CL-" + str(uuid.uuid4())[:8].upper()
 
-    # -------------------------------------------------
+  
     # Insertar pasajero
-    # -------------------------------------------------
+  
     @staticmethod
     def insert(nombre_completo: str,
                fecha_nacimiento,
@@ -33,13 +33,13 @@ class PasajeroDAO:
         try:
             cursor = connection.cursor()
 
-            # 1️⃣ Obtener o crear raza
+            # 1 Obtener o crear raza
             id_raza = RazaDAO.get_or_create(raza)
 
             if not id_raza:
                 return None
 
-            # 2️⃣ Generar número cliente
+            # 2 Generar número cliente
             numero_cliente = PasajeroDAO.generar_numero_cliente()
 
             query = """
@@ -77,9 +77,9 @@ class PasajeroDAO:
         finally:
             close_connection(connection)
 
-    # -------------------------------------------------
+  
     # Buscar pasajero por ID
-    # -------------------------------------------------
+  
     @staticmethod
     def get_by_id(id_pasajero: int) -> Optional[Dict]:
 
@@ -103,9 +103,9 @@ class PasajeroDAO:
         finally:
             close_connection(connection)
 
-    # -------------------------------------------------
+ 
     # Buscar por número de cliente
-    # -------------------------------------------------
+
     @staticmethod
     def get_by_numero_cliente(numero_cliente: str) -> Optional[Dict]:
 
