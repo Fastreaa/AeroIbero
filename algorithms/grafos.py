@@ -1,43 +1,77 @@
+import pandas as pd
 from math import inf
 from os import system
 
-# Clase para guardar matrices de adhyacencia
 class Grafo:
-    # Recibe una lista de nodos y la matriz en sí
-    def __init__(self, elementos:list, matrix:list):
-        self.elementos = elementos
-        self.matrix = matrix
+    def __init__(self, ruta:str=None):
+        if not ruta:
+            return
+        
+        # Leer el archivo
+        self.__dataset = pd.read_csv(ruta)
 
-        # Si alguna dimension de la matriz no coincide con la cantidad de nodos, imprime error
-        if len(self.matrix) != len(self.elementos):
-            print("Matrix doesn't contain the same amount of rows as elements declared...")
+        # Obtener todos loas puntos de origen y de destino
+        origenes = self.__dataset['Origen'].unique()
+        destinos = self.__dataset['Destino'].unique()
 
-        for el in self.matrix:
-            if len(el) != len(self.elementos):
-                print("A row doesn't have the same declared amount of elements...")
+        self.__missing_origenes = []
+        self.__missing_destinos = []
 
-    # Método para convertir a cadena la matriz
+        # Obtener los puntos que son mencionados en una columna pero no en la otra para agregarlos
+        for origen in origenes:
+            if origen not in destinos:
+                self.__missing_destinos.append(origen)
+                self.__dataset.loc[len(self.__dataset)] = [origen, origen, None, inf, inf, inf]
+
+        for destino in destinos:
+            if destino not in origenes:
+                self.__missing_origenes.append(destino)
+                self.__dataset.loc[len(self.__dataset)] = [destino, destino, None, inf, inf, inf]
+        
+        # Mensaje de advertencia
+        # if len(self.__missing_origenes):
+        #     print("Warning: some destinations are not listed in the origins row, they were aded to the adjacency matrix.")
+        # if len(self.__missing_destinos):
+        #     print("Warning: some origins are not listed in the destination row, they were aded to the adjacency matrix.")
+
+        # Crea 3 matrices de origenes y destinos considerando la distancia, el tiempo y el costo
+        # Las acomoda para tener la forma de una matriz de adyacencia
+        # Esto genera 3 matrices de adyacencia en una, con 3 diferentes costos: distancia, tiempo y precio listas para operarse con Djikstra
+        self.__matrix = self.__dataset.pivot(index='Origen', columns='Destino', values=['Distancia (Km)', 'Tiempo total (Hrs)', 'Costo total']).sort_index()
+        self.__matrix.fillna(inf, inplace=True)
+
+    # Impresión como cadena
     def __str__(self):
-        string = '\t\t'
+        string = ''
         
-        for el in self.elementos:
-            string += f'{el}{" "*(14-len(f"{el}"))}'
-        
-        for i in range(len(self.elementos)):
-            string += f'\n{self.elementos[i]}{" "*(16-len(f"{self.elementos[i]}"))}'
+        crit = self.getCryteria()
 
-            for j in range(len(self.matrix[i])):
-                string += f'{self.matrix[i][j]}{" "*(14-len(f"{self.matrix[i][j]}"))}'
-    
+        # Imprime por separado cada tabla por criterio
+        for el in crit:
+            string += f'{el}:\n{self.__matrix[el]}\n\n'
+
         return string
 
-    # Obtiene la fila de adhyacencia de un nodo específico
-    def getElementRow(self, element):
-        for i in range(len(self.elementos)):
-            if self.elementos[i] == element:
-                return self.matrix[i]
+    # Obtiene todos los criterios por los que se evalua
+    def getCryteria(self):
+        crit = []
+        for el in self.__matrix.columns.values:
+            if el[0] not in crit:
+                crit.append(el[0])
         
-        return None
+        return crit
+    
+    # Obtiene el elemento 'element' en la matriz del criterio 'field'
+    def getElementRow(self, field, element):
+        return self.__matrix.loc[element][field].values
+    
+    # Obtiene la matriz de adyacencia
+    def getMatrix(self):
+        return self.__matrix
+    
+    # Obtiene el dataset original
+    def getDataSet(self):
+        return self.__dataset
 
 # Como se guarda un nodo en la tabla de mapeo
 class NodoMapeo:
@@ -49,50 +83,39 @@ class NodoMapeo:
     
     # Metodo para convertir a cadena
     def __str__(self):
-        return f'{self.nombre}{" "*(16-len(f"{self.nombre}"))}{self.costo if self.costo != inf else '--'}\t{self.origen if self.origen != None else '--'}'
+        origen = self.origen if self.origen != None else '--'
+        costo = self.costo if self.costo != inf else '--'
+
+        return f'{self.nombre}{" "*(20-len(f"{self.nombre}"))}{costo}{" "*(20-len(f'{costo}'))}{origen}'
 
 # Tabla de mapeo con el algoritmo de dijkstra
 class TablaMapeo:
-    # Recibe una matriz de adhyacencia
-    def __init__(self, nodos:Grafo):
+    # Recibe una matriz de adhyacencia o la ruta al archivo csv
+    def __init__(self, nodos:Grafo|str):
         self.nodos = []         # Lista de NodoMapeo que contendrá la tabla final
         self.priorityList = []  # Lista de NodoMapeo, es la lista de nodos que faltan por evaluar
 
-        # Forzosamente se debe recibir una matriz de adhyacencia
-        if type(nodos) == type(Grafo([1], [[1]])):
-            self.grafo = nodos  # Guarda la matriz
+        # guarda el grafo según el argumento de entrada
+        if type(nodos) == type(Grafo()):
+            self.grafo = nodos
+        elif type(nodos) == type('a'):
+            self.grafo = Grafo(nodos)
 
-            # Guarda cada nodo de la matriz en la lista de nodos
-            for el in nodos.elementos:
-                self.nodos.append(NodoMapeo(el))
+        matrix = self.grafo.getMatrix()
+
+        # Guarda cada nodo de la matriz en la lista de nodos
+        for i in range(len(matrix)):
+            self.nodos.append(NodoMapeo(matrix.iloc[i].name))
 
     # Metodo para imprimir en forma de cadena
     def __str__(self):
-        string = 'Nodo\t\tCosto\tOrigen'
+        string = 'Nodo' + ' '*16 + 'Costo' + ' '*15 + 'Origen'
 
         for el in self.nodos:
             string += f'\n{el}'
 
         return string
-    
-    # Regresa una lista con la ruta que se debe recorrer para llegar a un destino
-    def findPath(self, dest):
-        # Extrae el nodo
-        nodo = self.findNodo(dest)
-        steps = []
 
-        # Recorre todos los nodos de regreso al origen
-        while nodo.origen != None and nodo.costo != 0:
-            steps.append(nodo.nombre)
-            nodo = self.findNodo(nodo.origen)
-
-        steps.append(nodo.nombre)
-
-        # Invierte el listado para iniciar desde el origen
-        steps.reverse()
-
-        return steps
-    
     # Busca un nodo por valor en la tabla final
     def findNodo(self, valor):
         for el in self.nodos:
@@ -100,6 +123,34 @@ class TablaMapeo:
                 return el
         
         return None
+    
+    # Regresa una lista con la ruta que se debe recorrer para llegar a un destino
+    def findPath(self, dest):
+        # Extrae el nodo
+        c = False
+
+        for el in self.nodos:
+            if not (el.origen == None and el.costo == inf):
+                c = True
+
+        if c:
+            nodo = self.findNodo(dest)
+            steps = []
+
+            # Recorre todos los nodos de regreso al origen
+            while nodo.origen != None and nodo.costo != 0:
+                steps.append(nodo.nombre)
+                nodo = self.findNodo(nodo.origen)
+
+            steps.append(nodo.nombre)
+
+            # Invierte el listado para iniciar desde el origen
+            steps.reverse()
+
+            return steps
+        else:
+            print('Warning: Routes are not generated yet...')
+            return None
     
     # Busca un nodo por valor en la lista de prioridad aka nodos no evaluados
     def findNodoInPL(self, valor):
@@ -122,14 +173,14 @@ class TablaMapeo:
         return nodo.costo
 
     # Ejecuta el alrgoritmo para encontrar el camino más corto
-    def dijkstra(self, origen):
+    def dijkstra(self, field, origen):
         self.resetNodos()
 
         # Busca el punto de origen y le establece un costo de 0
         o = self.findNodo(origen)
 
         if o == None:
-            print("Nodo de origen inexistente...")
+            print("Warning: Couldn't find origin node...")
             return
 
         o.costo = 0
@@ -142,7 +193,7 @@ class TablaMapeo:
             self.priorityList.sort(key=self.sortCrit) # Acomoda la lista según los costos
             nodo = self.priorityList.pop(0) # Extrae el primer elemento
 
-            row = self.grafo.getElementRow(nodo.nombre).copy() # Obtiene las conexiones del elemento extraido
+            row = self.grafo.getElementRow(field, nodo.nombre).copy() # Obtiene las conexiones del elemento extraido
 
             # Para cada elemento de las conexiones del elemento extraido
             for i in range(len(row)):
@@ -165,105 +216,85 @@ class TablaMapeo:
                     n.costo = costo
                     n.origen = nodo.nombre
 
-
-# Trata un grafo para buscar un camino de inicio a fin
-def evalGrafo(tabla:TablaMapeo):
-    entry1 = None
-    start = None
-
-    entry2 = None
-    end = None
-
-    # Recibe el nodo inicial
-    while start == None:
-        print(tabla.grafo)
-        entry1 = input("Introduce un nodo de inicio: ")
-
-        if type(tabla.nodos[0].nombre) == type(1):
-            entry1 = eval(entry1)
-
-        start = tabla.findNodo(entry1)
-
-        system("clear")
-
-        if start == None:
-            print("No se encontró el nodo...")
-
-    # Busca las rutas partiendod del nodo elegido
-    tabla.dijkstra(entry1)
-
-    # Obtiene el nodo destino
-    while end == None:
-        print(tabla)
-        entry2 = input("Introduce el nodo final: ")
-
-        if type(tabla.nodos[0].nombre) == type(1):
-            entry2 = eval(entry2)
-
-        end = tabla.findNodo(entry2)
-
-        system("clear")
-
-        # En caso de elegir el mismo nodo o uno inexistente
-        if end == None:
-            print("No se encontró el nodo...")
-        elif entry2 == entry1:
-            print("Ya estás en ese nodo...")
-            end = None
-    
-    
-    print(tabla)
-    print()
-
-    # Si no se puede llegar al nodo
-    if end.costo == inf and end.origen == None:
-        print("No se puede acceder a ese nodo...")
-    else:
-        print(f"Total de pasos: {end.costo}")
-        path = tabla.findPath(entry2)
+    # Trata un grafo para buscar un camino de inicio a fin
+    def evalGrafo(tabla):
+        entry0 = None
         
-        for i in range(len(path)):
-            if i:
-                print(' -> ', end='')
+        entry1 = None
+        start = None
+
+        entry2 = None
+        end = None
+
+        # Listado de criterios para considerar costos
+        crit = tabla.grafo.getCryteria()
+
+        # Recibe el criterio a considerar
+        while entry0 == None:
+            for el in crit:
+                print(el)
+
+            entry0 = input('Introduce un criterio de costo: ')
+
+            system('clear')
+
+            if entry0 not in crit:
+                print("El criterio mencionado no existe...")
+                entry0 = None
+
+        # Recibe el nodo inicial
+        while start == None:
+            print(tabla.grafo)
+            entry1 = input("Introduce un nodo de inicio: ")
+
+            if type(tabla.nodos[0].nombre) == type(1):
+                entry1 = eval(entry1)
+
+            start = tabla.findNodo(entry1)
+
+            system("clear")
+
+            if start == None:
+                print("No se encontró el nodo...")
+
+        # Busca las rutas partiendod del nodo elegido
+        tabla.dijkstra(entry0, entry1)
+
+        # Obtiene el nodo destino
+        while end == None:
+            print(tabla)
+            entry2 = input("Introduce el nodo final: ")
+
+            if type(tabla.nodos[0].nombre) == type(1):
+                entry2 = eval(entry2)
+
+            end = tabla.findNodo(entry2)
+
+            system("clear")
+
+            # En caso de elegir el mismo nodo o uno inexistente
+            if end == None:
+                print("No se encontró el nodo...")
+            elif entry2 == entry1:
+                print("Ya estás en ese nodo...")
+                end = None
+        
+        
+        print(tabla)
+        print()
+
+        # Si no se puede llegar al nodo
+        if end.costo == inf and end.origen == None:
+            print("No se puede acceder a ese nodo...")
+        else:
+            print(f"{entry0}: {end.costo}")
+            path = tabla.findPath(entry2)
             
-            print(path[i], end='')
-    
-    input("\n\nPresiona <enter> para continuar.")
-    system("clear")
-
-if __name__ == '__main__':
-    # Grafo de pruebas
-    gEJ = Grafo(['Nashville', 'Memphis', 'Atlanta', 'New Orleans', 'Movile', 'Savannah'], 
-        [[0,15,2,0,0,0], 
-        [15,0,10,3,7,0], 
-        [2,10,0,0,2,1], 
-        [0,3,0,0,3,0], 
-        [0,7,2,3,0,6], 
-        [0,0,1,0,6,0]])
-    tEJ = TablaMapeo(gEJ)
-
-    # Grafo IV
-    gIV = Grafo([1,2,3,4,5,6,7], [[0,0,3,0,0,0,0], [3,0,0,0,0,0,0], [0,0,0,0,3,2,0], [0,0,0,0,0,0,2], [0,0,0,0,0,0,0], [0,0,0,0,0,0,1], [0,0,2,0,0,0,0]])
-    tIV = TablaMapeo(gIV)
-
-    # Grafo V
-    gV = Grafo([1,2,3,4,5,6], [[0,1,3,0,0,0],[0,0,0,0,0,0],[0,2,0,0,0,7],[0,0,0,0,0,0],[4,0,0,5,0,0],[0,0,0,6,0,0]])
-    tV = TablaMapeo(gV)
-
-    # Grafo VII
-    gVII = Grafo(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'], 
-        [[0,7,2,6,0,0,0,9,0], 
-        [7,0,6,0,0,0,0,0,0], 
-        [2,6,0,1,3,0,0,0,0], 
-        [6,0,1,0,0,0,0,5,0], 
-        [0,0,3,0,0,2,8,0,1], 
-        [0,0,0,0,2,0,3,0,0], 
-        [0,0,0,0,8,3,0,0,0], 
-        [9,0,0,5,0,0,0,0,0], 
-        [0,0,0,0,1,0,0,0,0]])
-    tVII = TablaMapeo(gVII)
-
-    evalGrafo(tEJ)
-    evalGrafo(tIV)
-    evalGrafo(tV)
-    evalGrafo(tVII)
+            for i in range(len(path)):
+                if i:
+                    print(' -> ', end='')
+                
+                print(path[i], end='')
+        
+        input("\n\nPresiona <enter> para continuar.")
+        system("clear")
