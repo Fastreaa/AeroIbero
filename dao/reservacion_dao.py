@@ -1,4 +1,5 @@
 # reservacion_dao.py
+from core.database import get_connection, close_connection
 
 @staticmethod
 def crear_reservacion(id_pasajero: int,

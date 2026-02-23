@@ -2,7 +2,7 @@
 
 import uuid
 from typing import Optional, Dict
-from database import get_connection, close_connection
+from core.database import get_connection, close_connection
 from dao.raza_dao import RazaDAO
 
 

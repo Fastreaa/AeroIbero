@@ -1,7 +1,7 @@
 # dao/raza_dao.py
 
 from typing import Optional
-from database import get_connection, close_connection
+from core.database import get_connection, close_connection
 
 
 class RazaDAO:

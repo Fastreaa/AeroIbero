@@ -1,7 +1,7 @@
 # dao/aeropuerto_dao.py
 
 from typing import List, Optional
-from database import get_connection, close_connection
+from core.database import get_connection, close_connection
 from models.aeropuerto import Aeropuerto
 
 
