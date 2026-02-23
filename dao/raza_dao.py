@@ -1,0 +1,42 @@
+# dao/raza_dao.py
+
+from typing import Optional
+from database import get_connection, close_connection
+
+
+class RazaDAO:
+
+    @staticmethod
+    def get_or_create(nombre: str) -> Optional[int]:
+
+        connection = get_connection()
+        if not connection:
+            return None
+
+        try:
+            cursor = connection.cursor()
+
+            nombre = nombre.strip().lower()
+
+            #1 Intentar obtener raza existente
+            select_query = "SELECT id_raza FROM raza WHERE nombre = %s"
+            cursor.execute(select_query, (nombre,))
+            result = cursor.fetchone()
+
+            if result:
+                return result[0]
+
+            #2 Si no existe, insertarla
+            insert_query = "INSERT INTO raza (nombre) VALUES (%s)"
+            cursor.execute(insert_query, (nombre,))
+            connection.commit()
+
+            return cursor.lastrowid
+
+        except Exception as e:
+            print("Error en RazaDAO.get_or_create:", e)
+            connection.rollback()
+            return None
+
+        finally:
+            close_connection(connection)

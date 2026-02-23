@@ -1,5 +1,6 @@
 import pandas as pd
 from math import inf
+from database import get_connection, close_connection
 
 # Leer el archivo
 vuelos = pd.read_csv('./Ciudades_Aeroibero.csv')
@@ -27,3 +28,14 @@ for destino in destinos:
 # Esto genera 3 matrices de adyacencia en una, con 3 diferentes costos: distancia, tiempo y precio listas para operarse con Djikstra
 matrix = vuelos.pivot(index='Origen', columns='Destino', values=['Distancia (Km)', 'Tiempo total (Hrs)', 'Costo total']).sort_index()
 matrix.fillna(inf, inplace=True)
+
+
+conn = get_connection()
+
+if conn:
+    cursor = conn.cursor()
+    cursor.execute("SELECT DATABASE();")
+    result = cursor.fetchone()
+    print("Base de datos actual:", result)
+
+    close_connection(conn)
