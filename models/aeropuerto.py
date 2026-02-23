@@ -93,7 +93,7 @@ class Aeropuerto:
             f"Salas disponibles: {len(self.salas_disponibles)}/{self.total_salas}\n"
             f"Puertas disponibles: {len(self.puertas_disponibles)}/{self.total_puertas}"
         )
--
+
     # Método de fábrica para crear desde BD
 
     @staticmethod
