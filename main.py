@@ -1,6 +1,6 @@
 import pandas as pd
 from math import inf
-from database import get_connection, close_connection
+from core.database import get_connection, close_connection
 
 # Leer el archivo
 vuelos = pd.read_csv('./Ciudades_Aeroibero.csv')
