@@ -1,5 +1,7 @@
+
 # reservacion.py
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
@@ -95,3 +97,10 @@ class Reservacion:
             precio_pagado=precio_pagado,
             fecha_reservacion=Reservacion._parse_datetime(fecha_reservacion)
         )
+@dataclass
+class Reservacion:
+    id_reservacion: Optional[int]
+    id_pasajero: int
+    id_vuelo: int
+    precio_pagado: float
+

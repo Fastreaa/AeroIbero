@@ -1,6 +1,9 @@
 # ruta.py
 
 from typing import Optional
+from dataclasses import dataclass
+from typing import Optional
+
 
 
 class Ruta:
@@ -89,3 +92,11 @@ class Ruta:
             tiempo_total=tiempo_total,
             costo_total=costo_total
         )
+
+class Ruta:
+    id_ruta: Optional[int]
+    id_ciudad_origen: int
+    id_ciudad_destino: int
+    distancia_km: float
+    tiempo_total: float
+    costo_total: float

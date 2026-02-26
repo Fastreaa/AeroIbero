@@ -1,7 +1,9 @@
+
 # vuelo.py
 
 from datetime import datetime, timedelta
 from typing import Optional
+from dataclasses import dataclass
 
 
 class Vuelo:
@@ -131,3 +133,17 @@ class Vuelo:
             puerta=puerta,
             capacidad=capacidad
         )
+
+
+@dataclass
+class Vuelo:
+    id_vuelo: Optional[int]
+    numero_vuelo: str
+    id_ruta: int
+    fecha_hora: datetime
+    id_aeropuerto_origen: int
+    id_aeropuerto_destino: int
+    sala: int
+    puerta: int
+    capacidad: int = 20
+
