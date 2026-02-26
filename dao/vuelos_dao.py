@@ -15,7 +15,7 @@ class VueloDAO:
                id_aeropuerto_destino: int,
                sala: int,
                puerta: int,
-               capacidad: int = 150) -> bool:
+               capacidad: int = 20) -> bool:
 
         connection = get_connection()
         if not connection:
@@ -23,6 +23,17 @@ class VueloDAO:
 
         try:
             cursor = connection.cursor()
+
+            # Regla de negocio: cada vuelo admite máximo 20 pasajeros
+            if capacidad != 20:
+                print("Capacidad inválida: el máximo permitido por vuelo es 20")
+                return False
+
+            # Validar que la ruta exista para asociar correctamente vuelo -> ruta
+            cursor.execute("SELECT 1 FROM ruta WHERE id_ruta = %s", (id_ruta,))
+            if not cursor.fetchone():
+                print("No existe la ruta especificada")
+                return False
 
             query = """
                 INSERT INTO vuelo (
