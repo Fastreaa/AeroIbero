@@ -88,6 +88,27 @@ class NodoMapeo:
 
         return f'{self.nombre}{" "*(20-len(f"{self.nombre}"))}{costo}{" "*(20-len(f'{costo}'))}{origen}'
 
+class NodoRuta:
+    def __init__(self, origen, destino, costos:dict):
+        self.origen = origen
+        self.destino = destino
+        self.costos = costos
+    
+    def __str__(self):
+        string = f'{self.origen} -> {self.destino}:\n'
+
+        for k, v in self.costos.items():
+            string += f'\t{k}: {v}\n'
+        
+        return string
+    
+    # Método para comparar    
+    def __eq__(self, other):
+        if not isinstance(other, NodoRuta):
+            return False
+        
+        return self.origen == other.origen and self.destino == other.destino
+
 # Tabla de mapeo con el algoritmo de dijkstra
 class TablaMapeo:
     # Recibe una matriz de adhyacencia o la ruta al archivo csv
@@ -127,6 +148,9 @@ class TablaMapeo:
     # Regresa una lista con la ruta que se debe recorrer para llegar a un destino
     def findPath(self, dest):
         # Extrae el nodo
+        matrix = self.grafo.getMatrix()
+        crit = self.grafo.getCryteria()
+
         c = False
 
         for el in self.nodos:
@@ -136,18 +160,28 @@ class TablaMapeo:
         if c:
             nodo = self.findNodo(dest)
             steps = []
+            resumen = []
 
             # Recorre todos los nodos de regreso al origen
             while nodo.origen != None and nodo.costo != 0:
-                steps.append(nodo.nombre)
+                steps.append(nodo)
                 nodo = self.findNodo(nodo.origen)
 
-            steps.append(nodo.nombre)
+            steps.append(nodo)
+
+            for i in range(len(steps) - 1):
+                costos = {}
+
+                for el in crit:
+                    costos[el] = matrix[el].loc[steps[i].origen].loc[steps[i].nombre]
+                
+                resumen.append(NodoRuta(steps[i].origen, steps[i].nombre, costos))
 
             # Invierte el listado para iniciar desde el origen
             steps.reverse()
+            resumen.reverse()
 
-            return steps
+            return steps, resumen
         else:
             print('Warning: Routes are not generated yet...')
             return None
