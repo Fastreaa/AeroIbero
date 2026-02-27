@@ -83,23 +83,24 @@ def generar_pase_abordar_pdf(datos: Dict[str, object], output_dir: str = "pases"
         y -= line_gap
 
     qr = QrCodeWidget(qr_payload)
-      bounds = qr.getBounds()
-      size = 150
-      width_qr = bounds[2] - bounds[0]
-      height_qr = bounds[3] - bounds[1]
-      drawing = Drawing(
-          size,
-          size,
-          transform=[size / width_qr, 0, 0, size / height_qr, 0, 0]
-      )
-      drawing.add(qr)
-      renderPDF.draw(drawing, c, width - 210, height - 300)
 
-      c.setFont("Helvetica", 9)
-      c.drawString(width - 210, height - 315, "QR de validación del pase")
-      
-      c.showPage()
-      c.save()
+    bounds = qr.getBounds()
+    size = 150
+    width_qr = bounds[2] - bounds[0]
+    height_qr = bounds[3] - bounds[1]
+    drawing = Drawing(
+        size,
+        size,
+        transform=[size / width_qr, 0, 0, size / height_qr, 0, 0]
+    )
+    drawing.add(qr)
+    renderPDF.draw(drawing, c, width - 210, height - 300)
 
-      return pdf_path
+    c.setFont("Helvetica", 9)
+    c.drawString(width - 210, height - 315, "QR de validación del pase")
+
+    c.showPage()
+    c.save()
+
+    return pdf_path
 
