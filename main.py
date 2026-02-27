@@ -1,5 +1,5 @@
-from ui.interfaz import run_app
+from grafico import run_grafico
 
 
 if __name__ == "__main__":
-    run_app()
+    run_grafico()
