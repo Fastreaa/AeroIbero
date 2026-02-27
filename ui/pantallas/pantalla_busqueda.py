@@ -1,6 +1,6 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
 from datetime import datetime
+from tkinter import messagebox, ttk
 from typing import Callable, Dict, List
 
 from core.servicios import ServiciosAeroIbero
@@ -17,18 +17,41 @@ class PantallaBusqueda(ttk.Frame):
         self.destino_var = tk.StringVar()
         self.fecha_var = tk.StringVar()
         self.criterio_var = tk.StringVar(value="costo")
+        self.route_mode = tk.StringVar(value="ida")
+        self.pasajeros_var = tk.IntVar(value=1)
 
         self._build()
         self._cargar_ciudades()
 
     def _build(self):
-        ttk.Label(self, text="1) Buscar vuelo", font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(0, 12))
+        ttk.Label(self, text="¡Bienvenidx a AeroIbero!", font=("Segoe UI", 34, "bold")).pack(anchor="w", pady=(0, 14))
 
-        grid = ttk.Frame(self)
+        tabs = ttk.Frame(self)
+        tabs.pack(fill="x", pady=(0, 10))
+        for label in ["Mi Reserva", "2) Opciones", "3) Datos y Pase", "Estados"]:
+            ttk.Button(tabs, text=label, state="disabled").pack(side="left", padx=(0, 2))
+
+        content = ttk.Frame(self, padding=12)
+        content.pack(fill="both", expand=True)
+
+        left = ttk.Frame(content)
+        left.pack(side="left", fill="both", expand=True, padx=(0, 12))
+
+        right = ttk.LabelFrame(content, text="Resumen", padding=10)
+        right.pack(side="right", fill="y")
+
+        ttk.Label(left, text="Busca tu vuelo", font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(0, 12))
+
+        mode_row = ttk.Frame(left)
+        mode_row.pack(fill="x", pady=(0, 10))
+        ttk.Radiobutton(mode_row, text="Ida", variable=self.route_mode, value="ida").pack(side="left", padx=(0, 12))
+        ttk.Radiobutton(mode_row, text="Multidestino", variable=self.route_mode, value="multidestino").pack(side="left")
+
+        grid = ttk.Frame(left)
         grid.pack(fill="x")
         grid.columnconfigure(1, weight=1)
 
-        ttk.Label(grid, text="Origen").grid(row=0, column=0, sticky="w", pady=6)
+        ttk.Label(grid, text="Ciudad de origen").grid(row=0, column=0, sticky="w", pady=6)
         self.origen_cb = ttk.Combobox(grid, textvariable=self.origen_var, state="readonly")
         self.origen_cb.grid(row=0, column=1, sticky="ew", pady=6)
 
@@ -47,7 +70,34 @@ class PantallaBusqueda(ttk.Frame):
             state="readonly",
         ).grid(row=3, column=1, sticky="ew", pady=6)
 
-        ttk.Button(self, text="Buscar y continuar", command=self._buscar).pack(anchor="e", pady=(14, 0))
+        pax_row = ttk.Frame(left)
+        pax_row.pack(anchor="w", pady=(10, 8))
+        ttk.Label(pax_row, text="Pasajeros", font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 8))
+        ttk.Button(pax_row, text="-", width=3, command=self._decrementar_pasajeros).pack(side="left")
+        ttk.Label(pax_row, textvariable=self.pasajeros_var, width=4, anchor="center").pack(side="left")
+        ttk.Button(pax_row, text="+", width=3, command=self._incrementar_pasajeros).pack(side="left")
+
+        actions = ttk.Frame(left)
+        actions.pack(anchor="w", pady=(6, 14))
+        ttk.Button(actions, text="Intercambiar", command=self._intercambiar_ciudades).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Limpiar", command=self._limpiar_busqueda).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Buscar y continuar", command=self._buscar).pack(side="left", padx=(0, 8))
+
+        self.resultado_text = tk.Text(left, height=8, wrap="word")
+        self.resultado_text.pack(fill="both", expand=True)
+
+        self.resumen_label = ttk.Label(
+            right,
+            text=(
+                "Aquí verás:\n"
+                "• Ruta sugerida\n"
+                "• Costo/tiempo/distancia\n"
+                "• Pasajeros seleccionados"
+            ),
+            justify="left",
+            width=25,
+        )
+        self.resumen_label.pack(anchor="nw")
 
     def _cargar_ciudades(self):
         try:
@@ -63,8 +113,31 @@ class PantallaBusqueda(ttk.Frame):
             self.origen_var.set(ciudades[0])
             self.destino_var.set(ciudades[1])
 
+    def _incrementar_pasajeros(self):
+        if self.pasajeros_var.get() < 20:
+            self.pasajeros_var.set(self.pasajeros_var.get() + 1)
+
+    def _decrementar_pasajeros(self):
+        if self.pasajeros_var.get() > 1:
+            self.pasajeros_var.set(self.pasajeros_var.get() - 1)
+
+    def _intercambiar_ciudades(self):
+        origen = self.origen_var.get()
+        destino = self.destino_var.get()
+        self.origen_var.set(destino)
+        self.destino_var.set(origen)
+
+    def _limpiar_busqueda(self):
+        self.fecha_var.set("")
+        self.criterio_var.set("costo")
+        self.route_mode.set("ida")
+        self.pasajeros_var.set(1)
+        self.resultado_text.delete("1.0", tk.END)
+        self.resumen_label.config(text="Aquí verás:\n• Ruta sugerida\n• Costo/tiempo/distancia\n• Pasajeros seleccionados")
+        self.app_state.pop("busqueda", None)
+        self.app_state.pop("opciones", None)
+
     def _crear_opciones(self, base: Dict) -> List[Dict]:
-        # Puedes reemplazar esta estrategia por vuelos reales en BD.
         costo = float(base["costo_total"])
         criterio = base["criterio"]
         return [
@@ -102,11 +175,12 @@ class PantallaBusqueda(ttk.Frame):
             messagebox.showwarning("Ruta inválida", "Origen y destino deben ser distintos")
             return
 
-        try:
-            datetime.strptime(fecha, "%Y-%m-%d")
-        except ValueError:
-            messagebox.showwarning("Fecha inválida", "La fecha debe tener formato YYYY-MM-DD")
-            return
+        if fecha:
+            try:
+                datetime.strptime(fecha, "%Y-%m-%d")
+            except ValueError:
+                messagebox.showwarning("Fecha inválida", "La fecha debe tener formato YYYY-MM-DD")
+                return
 
         try:
             resultado = ServiciosAeroIbero.ejecutar_dijkstra(origen, destino, criterio)
@@ -114,15 +188,38 @@ class PantallaBusqueda(ttk.Frame):
             messagebox.showerror("Error", f"No se pudo calcular ruta: {e}")
             return
 
+        self.resultado_text.delete("1.0", tk.END)
+
         if not resultado.get("camino"):
-            messagebox.showwarning("Sin ruta", "No existe ruta para esa búsqueda")
+            self.resultado_text.insert(tk.END, "No se encontró una ruta disponible.\n")
             return
+
+        camino = " -> ".join(resultado["camino"])
+        costo = resultado["costo_total"]
+
+        self.resultado_text.insert(tk.END, f"Modo: {self.route_mode.get()}\n")
+        self.resultado_text.insert(tk.END, f"Fecha: {fecha or 'No especificada'}\n")
+        self.resultado_text.insert(tk.END, f"Criterio: {criterio}\n")
+        self.resultado_text.insert(tk.END, f"Pasajeros: {self.pasajeros_var.get()}\n\n")
+        self.resultado_text.insert(tk.END, f"Ruta óptima:\n{camino}\n")
+        self.resultado_text.insert(tk.END, f"Costo total ({criterio}): {costo:.2f}\n")
+
+        self.resumen_label.config(
+            text=(
+                f"Ruta: {camino}\n"
+                f"Criterio: {criterio}\n"
+                f"Costo total: {costo:.2f}\n"
+                f"Pasajeros: {self.pasajeros_var.get()}"
+            )
+        )
 
         self.app_state["busqueda"] = {
             "origen": origen,
             "destino": destino,
             "fecha": fecha,
             "criterio": criterio,
+            "modo": self.route_mode.get(),
+            "pasajeros": self.pasajeros_var.get(),
         }
         self.app_state["opciones"] = self._crear_opciones(resultado)
         self.on_next()
