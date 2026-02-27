@@ -3,3 +3,4 @@ from ui.interfaz import run_app
 
 if __name__ == "__main__":
     run_app()
+    run_grafico()

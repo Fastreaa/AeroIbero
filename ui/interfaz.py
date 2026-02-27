@@ -1,3 +1,4 @@
+
 # ui/interfaz.py
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from tkinter import ttk, messagebox
 from core.servicios import ServiciosAeroIbero
 from dao.ciudad_dao import CiudadDAO
 from core.database import get_connection, close_connection
+from algorithms.pase import generar_pase_abordar_pdf
 
 
 class AeroIberoApp(tk.Tk):
@@ -26,6 +28,10 @@ class AeroIberoApp(tk.Tk):
         self.origen_var = tk.StringVar()
         self.destino_var = tk.StringVar()
         self.fecha_var = tk.StringVar()
+        self.opciones_generadas: list[dict] = []
+        self.opcion_seleccionada = tk.IntVar(value=-1)
+        self.opcion_elegida: dict | None = None
+        self.totales_ruta = {"costo": 0.0, "tiempo": 0.0, "distancia": 0.0}
 
         self._build_ui()
         self._cargar_ciudades()
@@ -36,20 +42,26 @@ class AeroIberoApp(tk.Tk):
 
         title = ttk.Label(
             root,
-            text="¡Bienvenidx a la plataforma de reservación de vuelos!",
+            text="¡Bienvenidx a AeroIbero!",
             font=("Segoe UI", 28, "bold"),
         )
         title.pack(anchor="w", pady=(0, 18))
 
-        tabs = ttk.Notebook(root)
-        tabs.pack(fill="both", expand=True)
+        self.tabs = ttk.Notebook(root)
+        self.tabs.pack(fill="both", expand=True)
 
-        self.tab_reserva = ttk.Frame(tabs, padding=14)
-        self.tab_estado = ttk.Frame(tabs, padding=14)
-        tabs.add(self.tab_reserva, text="Mi Reserva")
-        tabs.add(self.tab_estado, text="Estados")
+        self.tab_reserva = ttk.Frame(self.tabs, padding=14)
+        self.tab_opciones = ttk.Frame(self.tabs, padding=14)
+        self.tab_datos = ttk.Frame(self.tabs, padding=14)
+        self.tab_estado = ttk.Frame(self.tabs, padding=14)
+        self.tabs.add(self.tab_reserva, text="Mi Reserva")
+        self.tabs.add(self.tab_opciones, text="2) Opciones")
+        self.tabs.add(self.tab_datos, text="3) Datos y Pase")
+        self.tabs.add(self.tab_estado, text="Estados")
 
         self._build_tab_reserva()
+        self._build_tab_opciones()
+        self._build_tab_datos()
         self._build_tab_estado()
 
     def _build_tab_reserva(self):
@@ -104,7 +116,9 @@ class AeroIberoApp(tk.Tk):
         actions.pack(anchor="w", pady=(6, 14))
         ttk.Button(actions, text="Intercambiar", command=self._intercambiar_ciudades).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Limpiar", command=self._limpiar_busqueda).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Buscar Vuelo", command=self._buscar_vuelo).pack(side="left")
+        ttk.Button(actions, text="Buscar Vuelo", command=self._buscar_vuelo).pack(side="left", padx=(0, 8))
+        self.btn_ir_opciones = ttk.Button(actions, text="Ir a opciones", command=self._ir_a_opciones, state="disabled")
+        self.btn_ir_opciones.pack(side="left")
 
         self.resultado = tk.Text(left, height=10, wrap="word")
         self.resultado.pack(fill="both", expand=True)
@@ -121,6 +135,56 @@ class AeroIberoApp(tk.Tk):
             padding=12,
         )
         self.resumen_label.pack(anchor="nw")
+
+    def _build_tab_opciones(self):
+        ttk.Label(self.tab_opciones, text="2) Selecciona tu opción", font=("Segoe UI", 14, "bold")).pack(anchor="w", pady=(0, 10))
+
+        self.opciones_info = ttk.Label(
+            self.tab_opciones,
+            text="Primero realiza una búsqueda en la pestaña 'Mi Reserva'.",
+            justify="left",
+        )
+        self.opciones_info.pack(anchor="w", pady=(0, 8))
+
+        self.opciones_container = ttk.Frame(self.tab_opciones)
+        self.opciones_container.pack(fill="both", expand=True)
+
+        actions = ttk.Frame(self.tab_opciones)
+        actions.pack(fill="x", pady=(8, 0))
+        ttk.Button(actions, text="Volver a búsqueda", command=lambda: self.tabs.select(self.tab_reserva)).pack(side="left")
+        ttk.Button(actions, text="Seleccionar opción", command=self._seleccionar_opcion).pack(side="right")
+
+    def _build_tab_datos(self):
+        ttk.Label(self.tab_datos, text="3) Captura tus datos y genera pase", font=("Segoe UI", 14, "bold")).pack(anchor="w", pady=(0, 10))
+
+        form = ttk.Frame(self.tab_datos)
+        form.pack(fill="x", pady=(0, 10))
+        form.columnconfigure(1, weight=1)
+
+        self.nombre_var = tk.StringVar()
+        self.cliente_var = tk.StringVar()
+        self.correo_var = tk.StringVar()
+
+        ttk.Label(form, text="Nombre completo").grid(row=0, column=0, sticky="w", pady=4)
+        ttk.Entry(form, textvariable=self.nombre_var).grid(row=0, column=1, sticky="ew", pady=4)
+
+        ttk.Label(form, text="Número cliente").grid(row=1, column=0, sticky="w", pady=4)
+        ttk.Entry(form, textvariable=self.cliente_var).grid(row=1, column=1, sticky="ew", pady=4)
+
+        ttk.Label(form, text="Correo").grid(row=2, column=0, sticky="w", pady=4)
+        ttk.Entry(form, textvariable=self.correo_var).grid(row=2, column=1, sticky="ew", pady=4)
+
+        self.resumen_datos = ttk.Label(
+            self.tab_datos,
+            text="Selecciona una opción en la pestaña 2 para ver totales y generar pase.",
+            justify="left",
+        )
+        self.resumen_datos.pack(anchor="w", pady=(0, 8))
+
+        actions = ttk.Frame(self.tab_datos)
+        actions.pack(fill="x")
+        ttk.Button(actions, text="Volver a opciones", command=lambda: self.tabs.select(self.tab_opciones)).pack(side="left")
+        ttk.Button(actions, text="Generar pase de abordar", command=self._generar_pase_desde_datos).pack(side="right")
 
     def _build_tab_estado(self):
         ttk.Label(self.tab_estado, text="Consulta estado de reservación", font=("Segoe UI", 14, "bold")).pack(anchor="w", pady=(0, 12))
@@ -190,6 +254,13 @@ class AeroIberoApp(tk.Tk):
         self.pasajeros.set(1)
         self.resultado.delete("1.0", tk.END)
         self.resumen_label.config(text="Aquí verás:\n• Ruta sugerida\n• Costo/tiempo/distancia\n• Pasajeros seleccionados")
+        self.opciones_generadas = []
+        self.opcion_seleccionada.set(-1)
+        self.opcion_elegida = None
+        self.btn_ir_opciones.configure(state="disabled")
+        self._render_opciones()
+        if hasattr(self, "resumen_datos"):
+            self.resumen_datos.config(text="Selecciona una opción en la pestaña 2 para ver totales y generar pase.")
 
     def _buscar_vuelo(self):
         origen = self.origen_var.get().strip()
@@ -245,6 +316,138 @@ class AeroIberoApp(tk.Tk):
             )
         )
 
+        self.totales_ruta = self._calcular_totales(origen, destino)
+        self.opciones_generadas = self._crear_opciones(resultado)
+        self.opcion_seleccionada.set(0)
+        self.opcion_elegida = None
+        self.btn_ir_opciones.configure(state="normal")
+        self._render_opciones()
+
+    def _calcular_totales(self, origen: str, destino: str) -> dict:
+        totales = {"costo": 0.0, "tiempo": 0.0, "distancia": 0.0}
+        for criterio in ("costo", "tiempo", "distancia"):
+            try:
+                res = ServiciosAeroIbero.ejecutar_dijkstra(origen, destino, criterio)
+                if res.get("camino"):
+                    totales[criterio] = float(res.get("costo_total", 0.0))
+            except Exception:
+                pass
+        return totales
+
+    @staticmethod
+    def _crear_opciones(resultado: dict) -> list[dict]:
+        costo = float(resultado.get("costo_total", 0))
+        criterio = resultado.get("criterio", "costo")
+        camino = resultado.get("camino", [])
+        return [
+            {"nombre": "Opción Económica", "criterio": criterio, "camino": camino, "costo_total": round(costo, 2)},
+            {"nombre": "Opción Flexible", "criterio": criterio, "camino": camino, "costo_total": round(costo * 1.08, 2)},
+            {"nombre": "Opción Premium", "criterio": criterio, "camino": camino, "costo_total": round(costo * 1.16, 2)},
+        ]
+
+    def _render_opciones(self):
+        for child in self.opciones_container.winfo_children():
+            child.destroy()
+
+        if not self.opciones_generadas:
+            self.opciones_info.config(text="No hay opciones disponibles. Realiza una búsqueda primero.")
+            return
+
+        self.opciones_info.config(text="Elige una opción y presiona 'Seleccionar opción'.")
+
+        for idx, op in enumerate(self.opciones_generadas):
+            card = ttk.LabelFrame(self.opciones_container, text=op["nombre"], padding=10)
+            card.pack(fill="x", pady=6)
+            ttk.Label(card, text=f"Ruta: {' -> '.join(op.get('camino', []))}").pack(anchor="w")
+            ttk.Label(card, text=f"Criterio: {op.get('criterio')}").pack(anchor="w")
+            ttk.Label(card, text=f"Total: {op.get('costo_total', 0):.2f}", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+            ttk.Radiobutton(
+                card,
+                text="Seleccionar esta opción",
+                variable=self.opcion_seleccionada,
+                value=idx,
+            ).pack(anchor="e", pady=(6, 0))
+
+    def _ir_a_opciones(self):
+        if not self.opciones_generadas:
+            messagebox.showwarning("Sin opciones", "Primero realiza una búsqueda de vuelo.")
+            return
+        self.tabs.select(self.tab_opciones)
+
+    def _seleccionar_opcion(self):
+        idx = self.opcion_seleccionada.get()
+        if idx < 0 or idx >= len(self.opciones_generadas):
+            messagebox.showwarning("Selección requerida", "Selecciona una opción para continuar.")
+            return
+
+        opcion = self.opciones_generadas[idx]
+        self.opcion_elegida = opcion
+
+        self.resumen_label.config(
+            text=(
+                f"Ruta: {' -> '.join(opcion.get('camino', []))}\n"
+                f"Criterio principal: {opcion.get('criterio')}\n"
+                f"Costo opción: {opcion.get('costo_total', 0):.2f}\n"
+                f"Totales ruta -> Costo:{self.totales_ruta.get('costo', 0):.2f} | "
+                f"Tiempo:{self.totales_ruta.get('tiempo', 0):.2f} | "
+                f"Distancia:{self.totales_ruta.get('distancia', 0):.2f}"
+            )
+        )
+
+        self.resumen_datos.config(
+            text=(
+                f"Opción elegida: {opcion.get('nombre')}\n"
+                f"Ruta: {' -> '.join(opcion.get('camino', []))}\n"
+                f"Costo total: {self.totales_ruta.get('costo', 0):.2f}\n"
+                f"Tiempo total: {self.totales_ruta.get('tiempo', 0):.2f}\n"
+                f"Distancia total: {self.totales_ruta.get('distancia', 0):.2f}"
+            )
+        )
+
+        messagebox.showinfo("Opción seleccionada", f"Seleccionaste: {opcion.get('nombre')}")
+        self.tabs.select(self.tab_datos)
+
+    def _generar_pase_desde_datos(self):
+        if not self.opcion_elegida:
+            messagebox.showwarning("Falta selección", "Primero selecciona una opción en la pestaña 2.")
+            return
+
+        nombre = self.nombre_var.get().strip()
+        cliente = self.cliente_var.get().strip()
+        correo = self.correo_var.get().strip()
+        if not nombre or not cliente or not correo:
+            messagebox.showwarning("Datos incompletos", "Completa nombre, número de cliente y correo.")
+            return
+
+        camino = self.opcion_elegida.get("camino", [])
+        origen = camino[0] if camino else self.origen_var.get().strip()
+        destino = camino[-1] if camino else self.destino_var.get().strip()
+
+        datos_pase = {
+            "id_reservacion": f"TMP-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            "numero_vuelo": "SIM-001",
+            "nombre_completo": nombre,
+            "numero_cliente": cliente,
+            "correo": correo,
+            "ciudad_origen": origen,
+            "ciudad_destino": destino,
+            "fecha_hora": self.fecha_var.get().strip() or datetime.now().strftime("%Y-%m-%d"),
+            "hora_abordaje": "N/D",
+            "sala": "Por asignar",
+            "puerta": "Por asignar",
+            "costo_total": f"{self.totales_ruta.get('costo', 0):.2f}",
+            "tiempo_total": f"{self.totales_ruta.get('tiempo', 0):.2f}",
+            "distancia_total": f"{self.totales_ruta.get('distancia', 0):.2f}",
+        }
+
+        try:
+            pdf_path = generar_pase_abordar_pdf(datos_pase)
+        except Exception as e:
+            messagebox.showerror("Error al generar pase", str(e))
+            return
+
+        messagebox.showinfo("Pase generado", f"Pase de abordar generado en:\n{pdf_path}")
+
     def _consultar_estado(self):
         id_res = self.id_res_var.get().strip()
         if not id_res.isdigit():
@@ -298,3 +501,5 @@ class AeroIberoApp(tk.Tk):
 def run_app():
     app = AeroIberoApp()
     app.mainloop()
+
+

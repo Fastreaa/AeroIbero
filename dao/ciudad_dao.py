@@ -14,11 +14,9 @@ class CiudadDAO:
 
         try:
             cursor = connection.cursor(dictionary=True)
-            query = """
-
-                FROM ciudad
-                ORDER BY nombre
-            """
+            query =("SELECT id_ciudad, id_pais, nombre, tipo "
+                "FROM ciudad "
+                "ORDER BY nombre ASC")
             cursor.execute(query)
             return cursor.fetchall()
         finally:
