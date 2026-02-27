@@ -29,6 +29,7 @@ def generar_pase_abordar_pdf(datos: Dict[str, object], output_dir: str = "pases"
     Campos esperados en `datos`:
     - id_reservacion, numero_vuelo, nombre_completo, numero_cliente
     - ciudad_origen, ciudad_destino, fecha_hora, hora_abordaje, sala, puerta
+    - opcionales: total_dinero, total_tiempo, total_distancia
     """
 
     os.makedirs(output_dir, exist_ok=True)
@@ -43,6 +44,9 @@ def generar_pase_abordar_pdf(datos: Dict[str, object], output_dir: str = "pases"
     hora_abordaje = _safe_text(datos.get("hora_abordaje"))
     sala = _safe_text(datos.get("sala"))
     puerta = _safe_text(datos.get("puerta"))
+    total_dinero = _safe_text(datos.get("total_dinero"))
+    total_tiempo = _safe_text(datos.get("total_tiempo"))
+    total_distancia = _safe_text(datos.get("total_distancia"))
 
     nombre_archivo = _file_safe(f"pase_res_{id_reservacion}_{numero_vuelo}") + ".pdf"
     pdf_path = os.path.join(output_dir, nombre_archivo)
@@ -74,10 +78,16 @@ def generar_pase_abordar_pdf(datos: Dict[str, object], output_dir: str = "pases"
         ("Hora de abordaje", hora_abordaje),
         ("Sala", sala),
         ("Puerta", puerta),
-        ("Generado", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-    ]
+     ]
 
+    if total_dinero:
+        contenido.append(("Costo total", f"${total_dinero}"))
+    if total_tiempo:
+        contenido.append(("Tiempo total", total_tiempo))
+    if total_distancia:
+        contenido.append(("Distancia total", total_distancia))
 
+    contenido.append(("Generado", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     for etiqueta, valor in contenido:
         c.drawString(50, y, f"{etiqueta}: {valor}")
         y -= line_gap

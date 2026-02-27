@@ -20,7 +20,9 @@ class PantallaBusqueda(ttk.Frame):
         self.criterio_var = tk.StringVar(value="costo")
         self.route_mode = tk.StringVar(value="ida")
         self.pasajeros_var = tk.IntVar(value=1)
-
+        self.route_mode = tk.StringVar(value="ida")
+        self.pasajeros_var = tk.IntVar(value=1)
+        
         self._build()
         self._cargar_ciudades()
 
