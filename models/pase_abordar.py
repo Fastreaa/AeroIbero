@@ -1,11 +1,7 @@
-
 # pase_abordar.py
 
-
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
-
 
 
 class PaseAbordar:
@@ -89,9 +85,4 @@ class PaseAbordar:
             hora_abordaje=PaseAbordar._parse_datetime(hora_abordaje),
             qr_data=qr_data
         )
-@dataclass
-class PaseAbordar:
-    id_pase: Optional[int]
-    id_reservacion: int
-    hora_abordaje: datetime
-    qr_data: Optional[str] = None
+
