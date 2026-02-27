@@ -15,7 +15,7 @@ class CiudadDAO:
         try:
             cursor = connection.cursor(dictionary=True)
             query = """
-                SELECT id_ciudad, id_pais, nombre, tipo
+
                 FROM ciudad
                 ORDER BY nombre
             """
@@ -163,3 +163,4 @@ class CiudadDAO:
             return False
         finally:
             close_connection(connection)
+

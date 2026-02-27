@@ -85,3 +85,4 @@ class PaseAbordar:
             hora_abordaje=PaseAbordar._parse_datetime(hora_abordaje),
             qr_data=qr_data
         )
+

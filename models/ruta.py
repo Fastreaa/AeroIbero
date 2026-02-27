@@ -1,5 +1,4 @@
 # ruta.py
-
 from typing import Optional
 
 

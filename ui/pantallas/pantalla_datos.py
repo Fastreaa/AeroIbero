@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import Callable, Dict
-
 from core.database import get_connection, close_connection
 from dao.ciudad_dao import CiudadDAO
+
 
 
 class PantallaDatosPasajero(ttk.Frame):
@@ -207,6 +207,7 @@ class PantallaDatosPasajero(ttk.Frame):
         ok, msg = self._validar_datos()
         if not ok:
             messagebox.showwarning("Datos inválidos", msg)
+            
             return
 
         busqueda = self.app_state.get("busqueda", {})
@@ -216,6 +217,7 @@ class PantallaDatosPasajero(ttk.Frame):
             messagebox.showwarning("Flujo incompleto", "Primero busca y elige una opción")
             return
 
+
         nombre_completo = f"{self.nombre_var.get().strip()} {self.segundo_nombre_var.get().strip()} {self.apellidos_var.get().strip()}".replace("  ", " ").strip()
         numero_vuelo = f"AI-{abs(hash('|'.join(opcion.get('camino', [])))) % 9000 + 1000}"
 
@@ -224,6 +226,7 @@ class PantallaDatosPasajero(ttk.Frame):
             "numero_vuelo": numero_vuelo,
             "nombre_completo": nombre_completo,
             "numero_cliente": f"CL-{abs(hash(self.telefono_var.get().strip())) % 999999:06d}",
+
             "ciudad_origen": busqueda.get("origen"),
             "ciudad_destino": busqueda.get("destino"),
             "fecha_hora": f"{busqueda.get('fecha')} 08:00:00",
@@ -239,6 +242,7 @@ class PantallaDatosPasajero(ttk.Frame):
             messagebox.showerror("Error al generar pase", str(e))
             return
 
+
         self.resumen_label.config(
             text=(
                 f"Ruta: {' -> '.join(opcion.get('camino', []))}\n"
@@ -251,14 +255,3 @@ class PantallaDatosPasajero(ttk.Frame):
             )
         )
 
-        self.resultado.delete("1.0", tk.END)
-        self.resultado.insert(
-            tk.END,
-            f"Pase generado correctamente.\n"
-            f"Pasajero: {nombre_completo}\n"
-            f"Vuelo: {numero_vuelo}\n"
-            f"Archivo: {ruta_pdf}\n"
-            f"\nContacto\n"
-            f"Teléfono: {self.telefono_var.get().strip()}\n"
-            f"Correo: {self.correo_var.get().strip()}\n"
-        )

@@ -14,6 +14,7 @@ class PantallaOpciones(ttk.Frame):
         self._build()
 
     def _build(self):
+
         # Encabezado estilo buscador de aerolínea
         self.header_title = ttk.Label(
             self,
@@ -153,6 +154,7 @@ class PantallaOpciones(ttk.Frame):
     def _continuar(self):
         idx = self.index_var.get()
         opciones = self.app_state.get("opciones_ordenadas") or self.app_state.get("opciones", [])
+
 
         if idx < 0 or idx >= len(opciones):
             messagebox.showwarning("Selección requerida", "Selecciona una opción para continuar")

@@ -1,5 +1,4 @@
 # reservacion.py
-
 from datetime import datetime
 from typing import Optional
 
@@ -95,3 +94,4 @@ class Reservacion:
             precio_pagado=precio_pagado,
             fecha_reservacion=Reservacion._parse_datetime(fecha_reservacion)
         )
+
