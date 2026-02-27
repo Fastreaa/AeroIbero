@@ -1,4 +1,5 @@
- #algorithms/pase.py
+
+# algorithms/pase.py
 
 from __future__ import annotations
 
@@ -76,6 +77,7 @@ def generar_pase_abordar_pdf(datos: Dict[str, object], output_dir: str = "pases"
         ("Generado", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
     ]
 
+
     for etiqueta, valor in contenido:
         c.drawString(50, y, f"{etiqueta}: {valor}")
         y -= line_gap
@@ -100,3 +102,4 @@ def generar_pase_abordar_pdf(datos: Dict[str, object], output_dir: str = "pases"
       c.save()
 
       return pdf_path
+

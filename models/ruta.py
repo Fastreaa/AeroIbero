@@ -88,4 +88,3 @@ class Ruta:
             tiempo_total=tiempo_total,
             costo_total=costo_total
         )
-
