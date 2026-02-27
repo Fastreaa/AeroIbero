@@ -1,8 +1,8 @@
+
 # vuelo.py
 
 from datetime import datetime, timedelta
 from typing import Optional
-
 
 class Vuelo:
     """
@@ -131,3 +131,4 @@ class Vuelo:
             puerta=puerta,
             capacidad=capacidad
         )
+

@@ -1,5 +1,4 @@
 # ruta.py
-
 from typing import Optional
 
 
@@ -89,3 +88,4 @@ class Ruta:
             tiempo_total=tiempo_total,
             costo_total=costo_total
         )
+

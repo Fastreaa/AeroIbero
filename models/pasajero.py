@@ -1,4 +1,3 @@
-# pasajero.py
 
 from datetime import date, datetime
 from typing import Optional
@@ -132,3 +131,4 @@ class Pasajero:
             telefono=telefono,
             correo=correo
         )
+
