@@ -1,66 +1,100 @@
-#./core/servicios.py
+# core/servicios.py
 
-from dao.ruta_dao import RutaDAO
-from dao.ciudad_dao import CiudadDAO
-from algorithms.grafos import Grafo, TablaMapeo
+import heapq
 from math import inf
+from typing import Dict, List, Tuple
+
+from dao.ciudad_dao import CiudadDAO
+from dao.ruta_dao import RutaDAO
 
 
 class ServiciosAeroIbero:
 
-    @staticmethod
-    def ejecutar_dijkstra(origen_nombre, destino_nombre, criterio="distancia"):
+    CRITERIOS = {
+        "distancia": "distancia_km",
+        "tiempo": "tiempo_total",
+        "costo": "costo_total"
+    }
 
-        ciudades = CiudadDAO.get_all()   # Debe devolver id_ciudad y nombre
+    @staticmethod
+    def _construir_grafo(criterio: str) -> Dict[str, List[Tuple[str, float]]]:
+        if criterio not in ServiciosAeroIbero.CRITERIOS:
+            raise ValueError("Criterio inválido. Usa: distancia, tiempo o costo")
+
+        ciudades = CiudadDAO.get_all()
         rutas = RutaDAO.get_all()
 
-        #  Crear lista de nodos (usaremos nombres)
-        nodos = [c["nombre"] for c in ciudades]
+        if not ciudades:
+            return {}
 
-        size = len(nodos)
+        id_to_nombre = {c["id_ciudad"]: c["nombre"] for c in ciudades}
+        peso_key = ServiciosAeroIbero.CRITERIOS[criterio]
 
-        #  Crear matriz NxN inicializada en 0
-        matriz = [[0 for _ in range(size)] for _ in range(size)]
+        grafo = {nombre: [] for nombre in id_to_nombre.values()}
 
-        #  Mapear nombre → índice
-        indice = {nodos[i]: i for i in range(size)}
+        for ruta in rutas:
+            origen_nombre = id_to_nombre.get(ruta["id_ciudad_origen"])
+            destino_nombre = id_to_nombre.get(ruta["id_ciudad_destino"])
 
-        # Llenar matriz con pesos
-        for r in rutas:
+            if not origen_nombre or not destino_nombre:
+                continue
 
-            origen_id = r["id_ciudad_origen"]
-            destino_id = r["id_ciudad_destino"]
+            peso = float(ruta[peso_key])
+            grafo[origen_nombre].append((destino_nombre, peso))
 
-            nombre_origen = next(c["nombre"] for c in ciudades if c["id_ciudad"] == origen_id)
-            nombre_destino = next(c["nombre"] for c in ciudades if c["id_ciudad"] == destino_id)
+        return grafo
 
-            i = indice[nombre_origen]
-            j = indice[nombre_destino]
+    @staticmethod
+    def ejecutar_dijkstra(origen_nombre: str,
+                          destino_nombre: str,
+                          criterio: str = "distancia") -> dict:
 
-            if criterio == "distancia":
-                peso = float(r["distancia_km"])
-            elif criterio == "tiempo":
-                peso = float(r["tiempo_total"])
-            elif criterio == "costo":
-                peso = float(r["costo_total"])
-            else:
-                raise ValueError("Criterio inválido")
+        grafo = ServiciosAeroIbero._construir_grafo(criterio)
 
-            matriz[i][j] = peso
+        if origen_nombre not in grafo:
+            raise ValueError(f"Ciudad de origen inválida: {origen_nombre}")
+        if destino_nombre not in grafo:
+            raise ValueError(f"Ciudad de destino inválida: {destino_nombre}")
 
-        # Crear grafo con tu clase original
-        grafo = Grafo(nodos, matriz)
-        tabla = TablaMapeo(grafo)
+        distancias = {nodo: inf for nodo in grafo}
+        anteriores = {nodo: None for nodo in grafo}
+        distancias[origen_nombre] = 0.0
 
-        # Ejecutar Dijkstra
-        tabla.dijkstra(origen_nombre)
+        heap = [(0.0, origen_nombre)]
 
-        # Obtener camino
-        camino = tabla.findPath(destino_nombre)
+        while heap:
+            dist_actual, nodo = heapq.heappop(heap)
 
-        nodo_destino = tabla.findNodo(destino_nombre)
+            if dist_actual > distancias[nodo]:
+                continue
+
+            if nodo == destino_nombre:
+                break
+
+            for vecino, peso in grafo[nodo]:
+                nueva_distancia = dist_actual + peso
+                if nueva_distancia < distancias[vecino]:
+                    distancias[vecino] = nueva_distancia
+                    anteriores[vecino] = nodo
+                    heapq.heappush(heap, (nueva_distancia, vecino))
+
+        if distancias[destino_nombre] == inf:
+            return {
+                "camino": [],
+                "costo_total": inf,
+                "criterio": criterio,
+                "mensaje": "No existe ruta entre las ciudades indicadas"
+            }
+
+        camino = []
+        actual = destino_nombre
+        while actual is not None:
+            camino.append(actual)
+            actual = anteriores[actual]
+        camino.reverse()
 
         return {
             "camino": camino,
-            "costo_total": nodo_destino.costo
+            "costo_total": distancias[destino_nombre],
+            "criterio": criterio
         }
