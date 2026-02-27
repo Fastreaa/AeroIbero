@@ -61,6 +61,14 @@ class Grafo:
         
         return crit
     
+    def getRows(self):
+        rows = []
+
+        for i in range(len(self.__matrix)):
+            rows.append(self.__matrix.iloc[i].name)
+
+        return rows
+    
     # Obtiene el elemento 'element' en la matriz del criterio 'field'
     def getElementRow(self, field, element):
         return self.__matrix.loc[element][field].values
@@ -86,7 +94,7 @@ class NodoMapeo:
         origen = self.origen if self.origen != None else '--'
         costo = self.costo if self.costo != inf else '--'
 
-        return f'{self.nombre}{" "*(20-len(f"{self.nombre}"))}{costo}{" "*(20-len(f'{costo}'))}{origen}'
+        return f'{self.nombre}{" "*(20-len(f"{self.nombre}"))}{costo}{" "*(20-len(f"{costo}"))}{origen}'
 
 class NodoRuta:
     def __init__(self, origen, destino, costos:dict):
@@ -127,6 +135,8 @@ class TablaMapeo:
         # Guarda cada nodo de la matriz en la lista de nodos
         for i in range(len(matrix)):
             self.nodos.append(NodoMapeo(matrix.iloc[i].name))
+        
+        self.rutas_totales = self.getRutasTotales()
 
     # Metodo para imprimir en forma de cadena
     def __str__(self):
@@ -249,6 +259,46 @@ class TablaMapeo:
                     
                     n.costo = costo
                     n.origen = nodo.nombre
+
+    # Genera todas las rutas posibles
+    def getRutasTotales(self):
+        # Diccionario de rutas por criterio
+        # Cada criterio tendrá una lista con todas las rutas posibles
+        # Las rutas constan de una tupla con los pasos a recorrer con un desglose de costos y
+        # un resumen de los puntos a visitar
+        rutas_totales = {}
+
+        matrix = self.grafo.getMatrix()
+        crit = self.grafo.getCryteria()
+
+        # Para cada criterio de búsqueda
+        for c in crit:
+            ruta = [] # Lista de rutas del criterio
+
+            # Para cada elemento en la matriz de adyacencia con el criterio
+            for el in matrix[c]:
+                self.dijkstra(c, el) # Genera la tabla de mapeo del elemento
+
+                for em in matrix[c]: # Busca el camino más corto para los demás elementos
+                    s, r = self.findPath(em) # Obtiene el desglose y el resumen
+
+                    # Si se puede llear de {el} a {em}, agrega la tupla a la lista
+                    if len(s) > 1:
+                        ruta.append((s, r))
+
+            # Guarda las rutas del criterio en el diccionario
+            rutas_totales[c] = ruta
+        
+        return rutas_totales
+    
+    def getDestinationsFrom(self, origen):
+        destinations = []
+
+        for el in self.rutas_totales[self.grafo.getCryteria()[0]]:
+            if el[0][0].nombre == origen:
+                destinations.append(el[0][-1].nombre)
+        
+        return destinations
 
     # Trata un grafo para buscar un camino de inicio a fin
     def evalGrafo(tabla):

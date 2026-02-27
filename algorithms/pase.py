@@ -78,7 +78,7 @@ def generar_pase_abordar_pdf(datos: Dict[str, object], output_dir: str = "pases"
         ("Hora de abordaje", hora_abordaje),
         ("Sala", sala),
         ("Puerta", puerta),
-    ]
+
 
     if total_dinero:
         contenido.append(("Costo total", f"${total_dinero}"))
@@ -87,8 +87,10 @@ def generar_pase_abordar_pdf(datos: Dict[str, object], output_dir: str = "pases"
     if total_distancia:
         contenido.append(("Distancia total", total_distancia))
 
+
     contenido.append(("Generado", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
+    contenido.append(("Generado", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     for etiqueta, valor in contenido:
         c.drawString(50, y, f"{etiqueta}: {valor}")
         y -= line_gap

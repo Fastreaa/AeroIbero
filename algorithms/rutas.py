@@ -1,10 +1,6 @@
 from grafos import TablaMapeo
 from os import system
 
-##########################################
-# Generación de todas las rutas posibles #
-##########################################
-
 # Carga la información del csv
 rutas = TablaMapeo('../Ciudades_Aeroibero.csv')
 grafo = rutas.grafo
@@ -12,30 +8,6 @@ grafo = rutas.grafo
 # Obtiene la matriz de adyacencia y los criterios de búsqueda
 matrix = grafo.getMatrix()
 crit = grafo.getCryteria()
-
-# Diccionario de rutas por criterio
-# Cada criterio tendrá una lista con todas las rutas posibles
-# Las rutas constan de una tupla con los pasos a recorrer con un desglose de costos y
-# un resumen de los puntos a visitar
-rutas_totales = {}
-
-# Para cada criterio de búsqueda
-for c in crit:
-    ruta = [] # Lista de rutas del criterio
-
-    # Para cada elemento en la matriz de adyacencia con el criterio
-    for el in matrix[c]:
-        rutas.dijkstra(c, el) # Genera la tabla de mapeo del elemento
-
-        for em in matrix[c]: # Busca el camino más corto para los demás elementos
-            s, r = rutas.findPath(em) # Obtiene el desglose y el resumen
-
-            # Si se puede llear de {el} a {em}, agrega la tupla a la lista
-            if len(s) > 1:
-                ruta.append((s, r))
-
-    # Guarda las rutas del criterio en el diccionario
-    rutas_totales[c] = ruta
 
 
 ##################################
@@ -79,15 +51,17 @@ while not v:
     for c in crit:
         i = 0
 
-        while i < len(rutas_totales[c]) and not (rutas_totales[c][i][0][0].nombre == origen and rutas_totales[c][i][0][-1].nombre == destino):
+        # Busca el mismo origen/destino en las 3 categorias
+        while i < len(rutas.rutas_totales[c]) and not (rutas.rutas_totales[c][i][0][0].nombre == origen and rutas.rutas_totales[c][i][0][-1].nombre == destino):
             i += 1
 
-        if i < len(rutas_totales[c]):
-            rutas_criterio[c] = rutas_totales[c][i]
+        # Si encontró el elemenento, lo guarda
+        if i < len(rutas.rutas_totales[c]):
+            rutas_criterio[c] = rutas.rutas_totales[c][i]
     
     # Si no se puede llegar al destino, marcar error
     if not len(rutas_criterio):
-        print("No se encpntró una ruta del origen al destino...")
+        print("No se encontró una ruta del origen al destino...")
         v = False
     else:
         # Revisa si las rutas de los diferentes criterios pasan por los mismos puntos

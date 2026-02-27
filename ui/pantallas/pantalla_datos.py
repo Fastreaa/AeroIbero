@@ -1,17 +1,24 @@
 import re
 import tkinter as tk
-from datetime import date, datetime
-from tkinter import messagebox, ttk
-from typing import Callable, Dict, Optional
+
+from tkinter import ttk, messagebox
+from typing import Callable, Dict
+from datetime import datetime, date
+
+from core.database import get_connection, close_connection
+from dao.ciudad_dao import CiudadDAO
+
 
 from core.database import close_connection, get_connection
 
-
 class PantallaDatosPasajero(ttk.Frame):
+
     TELEFONO_REGEX = re.compile(r"^\+?[\d\s\-()]{8,20}$")
+
 
     def __init__(self, master, app_state: Dict, on_back: Callable[[], None]):
         super().__init__(master, padding=16)
+
         self.app_state = app_state
         self.on_back = on_back
 
@@ -29,23 +36,26 @@ class PantallaDatosPasajero(ttk.Frame):
         self._cargar_catalogos()
 
     def _build(self):
-        ttk.Label(self, text="3) Información de pasajeros", font=("Segoe UI", 18, "bold")).pack(anchor="w", pady=(0, 10))
+        ttk.Label(
+            self,
+            text="3) Información de pasajeros",
+            font=("Segoe UI", 18, "bold"),
+        ).pack(anchor="w", pady=(0, 10))
 
         left = ttk.Frame(self)
+
         left.pack(fill="both", expand=True)
 
+        # ---------- Información personal ----------
         info_card = ttk.LabelFrame(left, text="Información personal", padding=12)
         info_card.pack(fill="x", pady=(0, 10))
         info_card.columnconfigure(1, weight=1)
 
         ttk.Label(info_card, text="Nombre").grid(row=0, column=0, sticky="w", pady=6)
-        ttk.Entry(info_card, textvariable=self.nombre_var).grid(row=0, column=1, sticky="ew", pady=6)
+        ttk.Entry(info_card, textvariable=self.nombre_var).grid(
+            row=0, column=1, sticky="ew", pady=6
+        )
 
-        ttk.Label(info_card, text="Segundo nombre (opcional)").grid(row=1, column=0, sticky="w", pady=6)
-        ttk.Entry(info_card, textvariable=self.segundo_nombre_var).grid(row=1, column=1, sticky="ew", pady=6)
-
-        ttk.Label(info_card, text="Apellidos").grid(row=2, column=0, sticky="w", pady=6)
-        ttk.Entry(info_card, textvariable=self.apellidos_var).grid(row=2, column=1, sticky="ew", pady=6)
 
         ttk.Label(info_card, text="Fecha de nacimiento (YYYY-MM-DD)").grid(row=3, column=0, sticky="w", pady=6)
         ttk.Entry(info_card, textvariable=self.nacimiento_var).grid(row=3, column=1, sticky="ew", pady=6)
@@ -56,11 +66,16 @@ class PantallaDatosPasajero(ttk.Frame):
 
         ttk.Label(info_card, text="País de residencia").grid(row=5, column=0, sticky="w", pady=6)
         self.pais_cb = ttk.Combobox(info_card, textvariable=self.pais_var, state="readonly")
+
         self.pais_cb.grid(row=5, column=1, sticky="ew", pady=6)
 
-        contacto_card = ttk.LabelFrame(left, text="Información de contacto", padding=12)
+        # ---------- Contacto ----------
+        contacto_card = ttk.LabelFrame(
+            left, text="Información de contacto", padding=12
+        )
         contacto_card.pack(fill="x", pady=(0, 10))
         contacto_card.columnconfigure(1, weight=1)
+
 
         ttk.Label(contacto_card, text="Teléfono").grid(row=0, column=0, sticky="w", pady=6)
         ttk.Entry(contacto_card, textvariable=self.telefono_var).grid(row=0, column=1, sticky="ew", pady=6)
@@ -68,13 +83,17 @@ class PantallaDatosPasajero(ttk.Frame):
         ttk.Label(contacto_card, text="Correo electrónico").grid(row=1, column=0, sticky="w", pady=6)
         ttk.Entry(contacto_card, textvariable=self.correo_var).grid(row=1, column=1, sticky="ew", pady=6)
 
+
         self.resumen_label = ttk.Label(left, justify="left")
         self.resumen_label.pack(anchor="w", fill="x", pady=(4, 10))
 
+        # ---------- Botones ----------
         actions = ttk.Frame(left)
         actions.pack(fill="x")
+
         ttk.Button(actions, text="Atrás", command=self.on_back).pack(side="left")
         ttk.Button(actions, text="Generar pase de abordar", command=self._generar_pase).pack(side="right")
+
 
     def _cargar_catalogos(self):
         self.pais_cb["values"] = self._obtener_paises()
@@ -95,8 +114,7 @@ class PantallaDatosPasajero(ttk.Frame):
             cursor = connection.cursor()
             cursor.execute("SELECT nombre FROM pais ORDER BY nombre")
             rows = cursor.fetchall()
-            values = [r[0] for r in rows if r and r[0]]
-            return values or ["México", "Colombia", "España", "Argentina"]
+            return [r[0] for r in rows if r and r[0]]
         except Exception:
             return ["México", "Colombia", "España", "Argentina"]
         finally:
@@ -112,8 +130,7 @@ class PantallaDatosPasajero(ttk.Frame):
             cursor = connection.cursor()
             cursor.execute("SELECT nombre FROM raza ORDER BY nombre")
             rows = cursor.fetchall()
-            values = [r[0] for r in rows if r and r[0]]
-            return values or ["Mestiza", "Afrodescendiente", "Indígena", "Caucásica", "Otra"]
+            return [r[0] for r in rows if r and r[0]]
         except Exception:
             return ["Mestiza", "Afrodescendiente", "Indígena", "Caucásica", "Otra"]
         finally:
@@ -130,9 +147,10 @@ class PantallaDatosPasajero(ttk.Frame):
         try:
             nacimiento = datetime.strptime(nacimiento_raw, "%Y-%m-%d").date()
         except ValueError:
-            return False, "Fecha de nacimiento inválida (usa YYYY-MM-DD)"
+            return False, "Fecha inválida (usa YYYY-MM-DD)"
 
         if nacimiento > date.today():
+
             return False, "La fecha de nacimiento no puede ser posterior al día de hoy"
 
         telefono = self.telefono_var.get().strip()
@@ -195,6 +213,7 @@ class PantallaDatosPasajero(ttk.Frame):
             messagebox.showwarning("Datos inválidos", msg)
             return
 
+
         busqueda = self.app_state.get("busqueda", {})
         opcion = self.app_state.get("opcion_elegida", {})
 
@@ -256,3 +275,4 @@ class PantallaDatosPasajero(ttk.Frame):
             )
         )
         messagebox.showinfo("Pase generado", f"Pase generado correctamente en:\n{ruta_pdf}")
+
